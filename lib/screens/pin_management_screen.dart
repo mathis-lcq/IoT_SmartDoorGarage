@@ -47,7 +47,9 @@ class _PinManagementScreenState extends State<PinManagementScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      subtitle: Text('User Code ${index + 1}'),
+                      subtitle: Text(
+                        authProvider.pinToUsername[pin] ?? 'unknown',
+                      ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () => _removePin(pin),
@@ -65,14 +67,17 @@ class _PinManagementScreenState extends State<PinManagementScreen> {
   }
 
   Future<void> _addPin() async {
-    final result = await showDialog<String>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => const _AddPinDialog(),
     );
 
     if (result != null && mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.addPin(result);
+      final success = await authProvider.addPin(
+        result['pin']!,
+        result['username']!,
+      );
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -92,12 +97,12 @@ class _PinManagementScreenState extends State<PinManagementScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer le code PIN'),
-        content: Text('Voulez-vous vraiment supprimer le code $pin ?'),
+        title: const Text('Delete PIN Code'),
+        content: Text('Are you sure you want to delete PIN code $pin?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -129,48 +134,66 @@ class _AddPinDialog extends StatefulWidget {
 
 class _AddPinDialogState extends State<_AddPinDialog> {
   final _pinController = TextEditingController();
+  final _usernameController = TextEditingController();
 
   @override
   void dispose() {
     _pinController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Ajouter un code PIN'),
-      content: TextField(
-        controller: _pinController,
-        decoration: const InputDecoration(
-          labelText: 'Code PIN (6 chiffres)',
-          counterText: '',
-        ),
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 24,
-          letterSpacing: 4,
-          fontWeight: FontWeight.bold,
-        ),
-        maxLength: 6,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
+      title: const Text('Add PIN Code'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _usernameController,
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              hintText: 'e.g., John Doe',
+            ),
+            autofocus: true,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _pinController,
+            decoration: const InputDecoration(
+              labelText: 'PIN Code (6 digits)',
+              counterText: '',
+            ),
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 24,
+              letterSpacing: 4,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLength: 6,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+          ),
         ],
-        autofocus: true,
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: const Text('Cancel'),
         ),
         TextButton(
           onPressed: () {
-            if (_pinController.text.length == 6) {
-              Navigator.of(context).pop(_pinController.text);
+            if (_pinController.text.length == 6 && _usernameController.text.isNotEmpty) {
+              Navigator.of(context).pop({
+                'pin': _pinController.text,
+                'username': _usernameController.text,
+              });
             }
           },
-          child: const Text('Ajouter'),
+          child: const Text('Add'),
         ),
       ],
     );

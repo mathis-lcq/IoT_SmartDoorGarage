@@ -4,6 +4,13 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../config/app_config.dart';
 
+class GarageMqttMessage {
+  final String topic;
+  final String payload;
+  
+  GarageMqttMessage(this.topic, this.payload);
+}
+
 class MqttService {
   static final MqttService _instance = MqttService._internal();
   factory MqttService() => _instance;
@@ -13,10 +20,10 @@ class MqttService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   
-  final StreamController<String> _messageController = 
-      StreamController<String>.broadcast();
+  final StreamController<GarageMqttMessage> _messageController = 
+      StreamController<GarageMqttMessage>.broadcast();
   
-  Stream<String> get messageStream => _messageController.stream;
+  Stream<GarageMqttMessage> get messageStream => _messageController.stream;
   bool _isConnected = false;
 
   bool get isConnected => _isConnected;
@@ -77,20 +84,21 @@ class MqttService {
         _isConnected = true;
         
         // Subscribe to garage topics
-        subscribe(AppConfig.mqttTopic);              // smart_garage/status
+        subscribe(AppConfig.mqttStatusTopic);        // smart_garage/status
         subscribe(AppConfig.mqttLogsTopic);          // smart_garage/logs
         subscribe(AppConfig.mqttPinsTopic);          // smart_garage/pins
         
         // Setup message listener
-        _client!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-          final message = messages[0].payload as MqttPublishMessage;
+        _client!.updates!.listen((List<MqttReceivedMessage<MqttMessage>>? messages) {
+          final message = messages![0].payload as MqttPublishMessage;
           final payload = MqttPublishPayload.bytesToStringAsString(
             message.payload.message,
           );
+          final topic = messages[0].topic;
           
-          print('MQTT Message received: $payload');
-          _messageController.add(payload);
-          _handleMessage(messages[0].topic, payload);
+          print('MQTT Message received on $topic: $payload');
+          _messageController.add(GarageMqttMessage(topic, payload));
+          _handleMessage(topic, payload);
         });
         
         return true;

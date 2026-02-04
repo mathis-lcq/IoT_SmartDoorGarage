@@ -5,12 +5,16 @@ A Flutter mobile application for GPS-based geofencing and secure remote control 
 ## Architecture
 
 ```
-Mobile App (Flutter)
+Mobile App (Flutter / SQLite)
        |
     MQTT Broker (broker.hivemq.com)
        |
    ESP8266 → Garage Door Motor
 ```
+
+App as a subscriber (status, logs, pins) and publisher (command, pins, logs).
+
+ESP as a subscriber (command, pins) and publisher (status, logs, pins).
 
 ## Features
 
@@ -93,9 +97,9 @@ Your ESP8266 should subscribe and publish to these MQTT topics:
 **Activity logs on `smart_garage/logs`:**
 ```json
 {
-  "action": "Garage Opened",
-  "user": "geofence",
-  "source": "mqtt"
+  "message": "Door Opened",
+  "source": "Joe",
+  "type": "auto"
 }
 ```
 
@@ -139,9 +143,12 @@ lib/
 │   ├── dashboard_screen.dart    # Main dashboard
 │   └── user_management_screen.dart # User management
 ├── services/
+│   └── database_service.dart     # SQLite database to store logs
 │   └── geofence_service.dart     # Geofencing logic
 │   └── mqtt_service.dart         # Mqtt logic
 │   └── notification_service.dart # Notification logic
+├── widgets/
+│   └── in_app_notification.dart  # Notification when using the app
 └── main.dart                     # App entry point
 ```
 

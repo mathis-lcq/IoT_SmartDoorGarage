@@ -1,37 +1,37 @@
 class ActivityLog {
   final String id;
-  final String action;
-  final String user;
+  final String message; // "open", "close", "toggle"
+  final String source; // username
+  final String type; // "auto" (geofencing) or "manual" (button click)
   final DateTime timestamp;
-  final String? source; // "manual", "geofence", "schedule"
 
   ActivityLog({
     required this.id,
-    required this.action,
-    required this.user,
+    required this.message,
+    required this.source,
+    required this.type,
     required this.timestamp,
-    this.source,
   });
 
   factory ActivityLog.fromJson(Map<String, dynamic> json) {
     return ActivityLog(
       id: json['id'] ?? '',
-      action: json['action'] ?? '',
-      user: json['user'] ?? 'Unknown',
+      message: json['message'] ?? '',
+      source: json['source'] ?? 'Unknown',
+      type: json['type'] ?? 'manual',
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
-      source: json['source'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'action': action,
-      'user': user,
-      'timestamp': timestamp.toIso8601String(),
+      'message': message,
       'source': source,
+      'type': type,
+      'timestamp': timestamp.toIso8601String(),
     };
   }
 }

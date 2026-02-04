@@ -26,6 +26,9 @@ class GeofenceService {
   
   // Callback to get garage status
   bool Function()? _getGarageStatus;
+  
+  // Callback to get current username
+  String Function()? _getUsername;
 
   // Initialize geofencing service
   Future<void> init([MqttService? mqttService]) async {
@@ -78,6 +81,11 @@ class GeofenceService {
   // Set callback to get garage status
   void setGarageStatusCallback(bool Function() callback) {
     _getGarageStatus = callback;
+  }
+  
+  // Set callback to get current username
+  void setUsernameCallback(String Function() callback) {
+    _getUsername = callback;
   }
   
   // Set test coordinates
@@ -169,19 +177,14 @@ class GeofenceService {
 
   // Handle entering geofence
   Future<void> _onEnterGeofence(double lat, double lng, double distance) async {
-    // Publish event via MQTT
-    final geofenceEvent = jsonEncode({
-      'event': 'enter',
-    });
-    _mqttService.publish(AppConfig.mqttLogsTopic, geofenceEvent);
-    print('MQTT event published: $geofenceEvent');
+    final username = _getUsername?.call() ?? 'geofence';
     
     // Check door status
     final isOpen = _getGarageStatus?.call() ?? false;
     
     if (!isOpen) {
       print('Door CLOSED → Sending OPEN command');
-      _mqttService.publish(AppConfig.mqttCommandTopic, jsonEncode({'command': 'open'}));
+      _mqttService.publish(AppConfig.mqttCommandTopic, jsonEncode({'command': 'open', 'source': username, 'type': 'auto'}));
       NotificationService().showInApp(
         title: 'Welcome Home',
         message: 'Door opening',
@@ -190,6 +193,10 @@ class GeofenceService {
       );
     } else {
       print('Door already OPEN → No action');
+      _mqttService.publish(
+        AppConfig.mqttLogsTopic,
+        jsonEncode({'message': 'Door already opened', 'source': username, 'type': 'auto'}),
+      );
       NotificationService().showInApp(
         title: 'Welcome Home',
         message: 'Door opened',
@@ -201,12 +208,7 @@ class GeofenceService {
 
   // Handle exiting geofence
   Future<void> _onExitGeofence(double lat, double lng, double distance) async {
-    // Publish event via MQTT
-    final geofenceEvent = jsonEncode({
-      'event': 'exit',
-    });
-    _mqttService.publish(AppConfig.mqttLogsTopic, geofenceEvent);
-    print('MQTT event published: $geofenceEvent');
+    final username = _getUsername?.call() ?? 'geofence';
     
     // Check door status
     final isOpen = _getGarageStatus?.call() ?? false;
@@ -214,7 +216,7 @@ class GeofenceService {
     
     if (isOpen) {
       print('Door OPEN → Sending CLOSE command');
-      _mqttService.publish(AppConfig.mqttCommandTopic, jsonEncode({'command': 'close'}));
+      _mqttService.publish(AppConfig.mqttCommandTopic, jsonEncode({'command': 'close', 'source': username, 'type': 'auto'}));
       NotificationService().showInApp(
         title: 'Goodbye',
         message: 'Door closing',
@@ -223,6 +225,10 @@ class GeofenceService {
       );
     } else {
       print('Door already CLOSED → No action');
+      _mqttService.publish(
+        AppConfig.mqttLogsTopic,
+        jsonEncode({'message': 'Door already closed', 'source': username, 'type': 'auto'}),
+      );
       NotificationService().showInApp(
         title: 'Goodbye',
         message: 'Door closed',

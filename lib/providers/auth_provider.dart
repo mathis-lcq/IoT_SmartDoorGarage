@@ -8,15 +8,19 @@ class AuthProvider with ChangeNotifier {
   final MqttService _mqttService;
   bool _isAuthenticated = false;
   String? _currentPin;
+  String? _currentUsername;
   bool _isAdmin = false;
   List<String> _validPins = ['666666']; // Default admin PIN
+  Map<String, String> _pinToUsername = {'666666': 'admin'}; // PIN -> Username mapping
 
   AuthProvider(this._mqttService);
 
   bool get isAuthenticated => _isAuthenticated;
   String? get currentPin => _currentPin;
+  String? get currentUsername => _currentUsername;
   bool get isAdmin => _isAdmin;
   List<String> get validPins => List.unmodifiable(_validPins.where((pin) => pin != '666666'));
+  Map<String, String> get pinToUsername => Map.unmodifiable(_pinToUsername);
 
   // Initialize - check if user is already logged in
   Future<void> init() async {
@@ -25,15 +29,30 @@ class AuthProvider with ChangeNotifier {
     _isAuthenticated = _currentPin != null;
     _isAdmin = _currentPin == '666666';
     
-    // Load local PINs (fallback)
+    // Set current username based on stored PIN
+    if (_currentPin != null) {
+      _currentUsername = _pinToUsername[_currentPin];
+    }
+    
+    // Load local PINs and usernames (fallback)
     final savedPins = prefs.getStringList('valid_pins');
+    final savedUsernames = prefs.getStringList('pin_usernames');
     if (savedPins != null) {
       _validPins = ['666666', ...savedPins];
+      // Restore username mappings
+      if (savedUsernames != null && savedUsernames.length == savedPins.length) {
+        for (int i = 0; i < savedPins.length; i++) {
+          _pinToUsername[savedPins[i]] = savedUsernames[i];
+        }
+      }
     }
     
     // Subscribe to MQTT PINs updates
-    _mqttService.messageStream.listen((message) {
-      _handleMqttPinsUpdate(message);
+    _mqttService.messageStream.listen((mqttMessage) {
+      // Only process messages from pins topic
+      if (mqttMessage.topic == AppConfig.mqttPinsTopic) {
+        _handleMqttPinsUpdate(mqttMessage.payload);
+      }
     });
     
     notifyListeners();
@@ -48,6 +67,7 @@ class AuthProvider with ChangeNotifier {
     // Check if the PIN is valid
     if (_validPins.contains(pin)) {
       _currentPin = pin;
+      _currentUsername = _pinToUsername[pin];
       _isAuthenticated = true;
       _isAdmin = pin == '666666';
 
@@ -61,11 +81,16 @@ class AuthProvider with ChangeNotifier {
     return false;
   }
 
-  Future<bool> addPin(String pin) async {
+  Future<bool> addPin(String pin, String username) async {
     if (!_isAdmin) return false;
     
     // Check the format
     if (pin.length != 6 || !RegExp(r'^[0-9]+$').hasMatch(pin)) {
+      return false;
+    }
+    
+    // Check if username is empty
+    if (username.trim().isEmpty) {
       return false;
     }
     
@@ -75,6 +100,7 @@ class AuthProvider with ChangeNotifier {
     }
     
     _validPins.add(pin);
+    _pinToUsername[pin] = username;
     await _savePins();
     notifyListeners();
     return true;
@@ -84,6 +110,7 @@ class AuthProvider with ChangeNotifier {
     if (!_isAdmin || pin == '666666') return false;
     
     _validPins.remove(pin);
+    _pinToUsername.remove(pin);
     await _savePins();
     notifyListeners();
     return true;
@@ -127,7 +154,10 @@ class AuthProvider with ChangeNotifier {
   Future<void> _savePinsLocally() async {
     final prefs = await SharedPreferences.getInstance();
     final pinsToSave = _validPins.where((pin) => pin != '666666').toList();
+    final usernamesToSave = pinsToSave.map((pin) => _pinToUsername[pin] ?? 'unknown').toList();
+    
     await prefs.setStringList('valid_pins', pinsToSave);
+    await prefs.setStringList('pin_usernames', usernamesToSave);
   }
 
   Future<void> logout() async {

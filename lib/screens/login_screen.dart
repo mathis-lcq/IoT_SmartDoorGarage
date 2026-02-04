@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_pinController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le code PIN doit contenir 6 chiffres')),
+        const SnackBar(content: Text('PIN code must contain 6 digits')),
       );
       return;
     }
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacementNamed('/dashboard');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Code PIN invalide')),
+          const SnackBar(content: Text('Invalid PIN code')),
         );
         _pinController.clear();
       }
@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Entrez votre code PIN',
+                  'Enter your PIN code',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _pinController,
                   autofocus: true,
                   decoration: const InputDecoration(
-                    labelText: 'Code PIN (6 chiffres)',
+                    labelText: 'PIN Code (6 digits)',
                     prefixIcon: Icon(Icons.pin),
                     border: OutlineInputBorder(),
                     counterText: '',

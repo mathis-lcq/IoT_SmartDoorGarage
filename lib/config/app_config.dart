@@ -2,7 +2,7 @@ class AppConfig {
   // MQTT Configuration
   static const String mqttBroker = 'broker.hivemq.com'; // Change to your MQTT broker
   static const int mqttPort = 8000; // WebSocket port for HiveMQ
-  static const String mqttTopic = 'smart_garage/status';
+  static const String mqttStatusTopic = 'smart_garage/status';
   static const String mqttCommandTopic = 'smart_garage/command';
   static const String mqttLogsTopic = 'smart_garage/logs';
   static const String mqttPinsTopic = 'smart_garage/pins';

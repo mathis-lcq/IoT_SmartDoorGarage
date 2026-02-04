@@ -30,6 +30,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _initServices() async {
     // Get MQTT service from provider
     final garageProvider = context.read<GarageProvider>();
+    final authProvider = context.read<AuthProvider>();
+    
     // Initial status refresh
     await garageProvider.refreshStatus();
     // GeofenceService doesn't need to initialize MQTT again (already done in main)
@@ -38,6 +40,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Configure callback to get garage status
     _geofenceService.setGarageStatusCallback(() {
       return garageProvider.status?.isOpen ?? false;
+    });
+    
+    // Configure callback to get current username
+    _geofenceService.setUsernameCallback(() {
+      return authProvider.currentUsername ?? 'unknown';
     });
   }
 
@@ -199,8 +206,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildControlButtons() {
-    return Consumer<GarageProvider>(
-      builder: (context, garageProvider, child) {
+    return Consumer2<GarageProvider, AuthProvider>(
+      builder: (context, garageProvider, authProvider, child) {
+        final username = authProvider.currentUsername ?? 'unknown';
+        
         return Column(
           children: [
             Row(
@@ -210,7 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: garageProvider.isLoading
                         ? null
                         : () async {
-                            await garageProvider.openGarage();
+                            await garageProvider.openGarage(username: username);
                           },
                     icon: const Icon(Icons.arrow_upward),
                     label: const Text('OPEN'),
@@ -227,7 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: garageProvider.isLoading
                         ? null
                         : () async {
-                            await garageProvider.closeGarage();
+                            await garageProvider.closeGarage(username: username);
                           },
                     icon: const Icon(Icons.arrow_downward),
                     label: const Text('CLOSE'),
@@ -377,30 +386,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return Card(
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: log.action.toLowerCase().contains('open')
+                        backgroundColor: log.message.toLowerCase().contains('open')
                             ? Colors.green
                             : Colors.red,
                         child: Icon(
-                          log.action.toLowerCase().contains('open')
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward,
+                          log.message.toLowerCase().contains('open')
+                              ? Icons.door_front_door_outlined
+                              : Icons.door_front_door,
                           color: Colors.white,
                           size: 20,
                         ),
                       ),
-                      title: Text(log.action),
+                      title: Text(log.message),
                       subtitle: Text(
-                        '${log.user} • ${DateFormat('MMM dd, yyyy HH:mm').format(log.timestamp)}',
+                        '${log.source} • ${DateFormat('MMM dd HH:mm').format(log.timestamp)}',
                       ),
-                      trailing: log.source != null
-                          ? Chip(
-                              label: Text(
-                                log.source!,
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              backgroundColor: Colors.blue[100],
-                            )
-                          : null,
+                      trailing: Chip(
+                        label: Text(
+                          log.type,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                        backgroundColor: log.type == 'auto' ? Colors.orange[100] : Colors.blue[100],
+                      ),
                     ),
                   );
                 },
