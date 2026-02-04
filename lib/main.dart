@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/garage_provider.dart';
 import 'services/mqtt_service.dart';
-import 'services/api_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/pin_management_screen.dart';
